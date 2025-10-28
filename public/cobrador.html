@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel del Cobrador - Finanzas JKzas</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { background-color: #eef1f6; }
+  </style>
+</head>
+<body>
+  <div class="panel cobrador">
+    <h2>🧾 Registro de Pagos</h2>
+    <table>
+      <tr><th>Cliente (Código o Nombre)</th><td><input type="text" id="cliente" placeholder="Ej: CL-001 o Juan Pérez" /></td></tr>
+      <tr><th>N.º de Cuota</th><td><input type="number" id="cuota" placeholder="Ej: 1" /></td></tr>
+      <tr><th>Valor Pagado</th><td><input type="number" id="valor" placeholder="$" /></td></tr>
+      <tr><th>Observación</th><td><textarea id="obs" rows="2" placeholder="Ej: pagó 2 cuotas"></textarea></td></tr>
+    </table>
+    <button id="btn-guardar">Registrar Pago</button>
+    <p id="mensaje"></p>
+
+    <h3 style="margin-top: 30px; text-align:center; color:#0f63f4;">Historial de Pagos</h3>
+    <div class="table-wrap">
+      <table id="tablaHistorial">
+        <thead>
+          <tr>
+            <th>Fila</th>
+            <th>Cliente</th>
+            <th>Cuota</th>
+            <th>Valor Pagado</th>
+            <th>Observación</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="script-cobrador.js"></script>
+</body>
+</html>
