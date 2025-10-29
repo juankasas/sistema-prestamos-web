@@ -35,10 +35,10 @@ try {
   console.error("🔍 Asegúrate de haber creado el archivo secreto credentials.json en Render.");
 }
 
-// Crear cliente de autenticación JWT
+// === CREAR CLIENTE DE AUTENTICACIÓN JWT ===
 const auth = new JWT({
   email: credentials.client_email,
-  key: credentials.private_key.replace(/\\n/g, '\n'),
+  key: credentials.private_key.replace(/\\n/g, "\n"), // corrige saltos de línea
   scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 
@@ -56,19 +56,20 @@ const auth = new JWT({
 })();
 
 // === ID DE LA HOJA ===
-const spreadsheetId = "1_RXiymPeK5sSPDofjfC-LlugeBNoasMztvLUtJ959Yc";
+const spreadsheetId = process.env.SHEET_ID;
 
 // === HELPERS ===
 async function sheetsApi() {
-  const client = await auth.getClient();
-  return google.sheets({ version: "v4", auth: client });
+  return google.sheets({ version: "v4", auth });
 }
+
 async function getSheetIdByName(nombreHoja) {
   const sheets = await sheetsApi();
   const info = await sheets.spreadsheets.get({ spreadsheetId });
   const hoja = info.data.sheets.find((s) => s.properties.title === nombreHoja);
   return hoja ? hoja.properties.sheetId : 0;
 }
+
 async function leerClientes() {
   const sheets = await sheetsApi();
   const resp = await sheets.spreadsheets.values.get({
@@ -77,6 +78,7 @@ async function leerClientes() {
   });
   return resp.data.values || [];
 }
+
 async function leerPagos() {
   const sheets = await sheetsApi();
   const resp = await sheets.spreadsheets.values.get({
@@ -85,6 +87,7 @@ async function leerPagos() {
   });
   return resp.data.values || [];
 }
+
 const norm = (v) => String(v || "").trim().toLowerCase();
 
 // === LOGIN ===
