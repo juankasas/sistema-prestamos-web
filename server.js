@@ -1,33 +1,7 @@
-// === CREAR AUTOMÁTICAMENTE EL ARCHIVO credentials.json EN RENDER ===
+// === CARGAR CREDENCIALES DESDE ARCHIVO SECRETO EN RENDER ===
 const fs = require("fs");
 const path = require("path");
 
-if (process.env.GOOGLE_CREDENTIALS) {
-  const credentialsPath = path.join(__dirname, "credentials.json"); // ✅ raíz
-
-  // Crear/reescribir el archivo en la raíz del proyecto
-  fs.writeFileSync(credentialsPath, process.env.GOOGLE_CREDENTIALS);
-  console.log("✅ Archivo credentials.json creado correctamente en Render (raíz).");
-
-  // 🔍 Verificar que el archivo exista y sea legible
-  if (fs.existsSync(credentialsPath)) {
-    console.log("✅ El archivo credentials.json existe y se puede leer en Render.");
-  } else {
-    console.error("❌ No se encontró credentials.json en Render.");
-  }
-
-} else {
-  console.warn("⚠️ Variable GOOGLE_CREDENTIALS no encontrada.");
-}
-
-// =============================
-//  SISTEMA PRÉSTAMOS – Server
-//  • PDF por rango/cliente
-//  • Recomputar sin borrar filas
-//  • “Eliminar” SOLO marca en hoja (no borra)
-//  • Editar cliente
-//  • Consolidado: responde a la UI y opcionalmente escribe en la hoja
-// =============================
 const express = require("express");
 const { google } = require("googleapis");
 const { JWT } = require("google-auth-library");
@@ -49,30 +23,16 @@ app.use(
   })
 );
 
-// === GOOGLE AUTH ===
-let credentials;
+// === LEER CREDENCIALES DESDE ARCHIVO SECRETO ===
+let credentials = {};
 try {
-  const raw = process.env.GOOGLE_CREDENTIALS;
-  if (!raw) throw new Error("Variable GOOGLE_CREDENTIALS vacía o no encontrada");
-
-  // 🔥 Nuevo método de decodificación universal
-  const normalized = raw
-    .replace(/\\n/g, '\n')        // convierte saltos de línea dobles a normales
-    .replace(/\\"/g, '"')         // quita escapes de comillas
-    .replace(/^"+|"+$/g, '');     // elimina comillas envolventes
-
-  // Intenta parsear. Si falla, intenta como Buffer (por si Render lo codifica)
-  try {
-    credentials = JSON.parse(normalized);
-  } catch {
-    const buffer = Buffer.from(normalized, 'utf8');
-    credentials = JSON.parse(buffer.toString());
-  }
-
-  console.log("✅ Credenciales cargadas correctamente y parseadas.");
+  const credentialsPath = "/etc/secrets/credentials.json";
+  const raw = fs.readFileSync(credentialsPath, "utf8");
+  credentials = JSON.parse(raw);
+  console.log("✅ Credenciales cargadas correctamente desde archivo secreto.");
 } catch (e) {
-  console.error("❌ Error leyendo credenciales:", e.message);
-  console.error("🔍 Valor inicial detectado (primeros 100 chars):", process.env.GOOGLE_CREDENTIALS?.slice(0, 100));
+  console.error("❌ Error leyendo archivo de credenciales:", e.message);
+  console.error("🔍 Asegúrate de haber creado el archivo secreto credentials.json en Render.");
 }
 
 // Crear cliente de autenticación JWT
