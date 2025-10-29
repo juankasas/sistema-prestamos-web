@@ -26,7 +26,6 @@ if (process.env.GOOGLE_CREDENTIALS) {
 // =============================
 const express = require("express");
 const { google } = require("googleapis");
-const path = require("path");
 const cors = require("cors");
 const session = require("express-session");
 const PDFDocument = require("pdfkit");
