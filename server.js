@@ -57,14 +57,22 @@ try {
   const raw = process.env.GOOGLE_CREDENTIALS;
   if (!raw) throw new Error("Variable GOOGLE_CREDENTIALS vacía o no encontrada");
 
-  // Si detecta que empieza con comillas escapadas o '\n', limpia el formato
-  const cleaned = raw.trim().startsWith("{\\n") ? JSON.parse(raw.replace(/\\n/g, "\\n")) : JSON.parse(raw);
+  // Limpieza inteligente de formato
+  let cleaned = raw;
 
-  credentials = cleaned;
+  // Si detecta comillas escapadas y saltos de línea, los corrige
+  if (raw.trim().startsWith('"{') || raw.includes('\\"')) {
+    cleaned = raw
+      .replace(/\\"/g, '"')        // elimina escapes de comillas
+      .replace(/\\\\n/g, '\\n')    // corrige dobles saltos
+      .replace(/^"|"$/g, '');      // elimina comillas envolventes
+  }
+
+  credentials = JSON.parse(cleaned);
   console.log("✅ Credenciales cargadas correctamente y parseadas.");
 } catch (e) {
   console.error("❌ No se pudieron leer las credenciales correctamente:", e.message);
-  console.error("🔍 Valor inicial detectado (parcial):", (process.env.GOOGLE_CREDENTIALS || "").slice(0, 100));
+  console.error("🔍 Valor inicial detectado (parcial):", process.env.GOOGLE_CREDENTIALS?.slice(0, 200));
 }
 
 // Crear cliente de autenticación JWT
