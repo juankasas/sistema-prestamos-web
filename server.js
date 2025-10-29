@@ -30,6 +30,7 @@ if (process.env.GOOGLE_CREDENTIALS) {
 // =============================
 const express = require("express");
 const { google } = require("googleapis");
+const { JWT } = require("google-auth-library");
 const cors = require("cors");
 const session = require("express-session");
 const PDFDocument = require("pdfkit");
@@ -49,8 +50,6 @@ app.use(
 );
 
 // === GOOGLE AUTH ===
-const { google } = require("googleapis");
-const { JWT } = require("google-auth-library");
 
 // Leer credenciales desde las variables de entorno
 let credentials;
@@ -231,8 +230,6 @@ app.post("/api/clientes/agregar", async (req, res) => {
     res.status(500).send("❌ Error al registrar cliente.");
   }
 });
-// === resto del código idéntico...
-// (no se modificó nada más)
 
 // === EDITAR CLIENTE ===
 app.put("/api/clientes/editar", async (req, res) => {
@@ -281,7 +278,6 @@ async function recomputarClienteDesdePagos(codigoONombre) {
   const clientes = await leerClientes();
   const pagos = await leerPagos();
 
-  // localizar por código o nombre
   const found = (() => {
     const key = norm(codigoONombre);
     for (let i = 1; i < clientes.length; i++) {
@@ -341,7 +337,6 @@ app.get("/api/pagos", async (_req, res) => {
       const r = rows[i];
       if (!r || !r[0]) continue;
 
-      // Buscar cliente asociado
       const clienteAsociado = clientes.find(
         (c, idx) =>
           idx > 0 &&
@@ -350,7 +345,7 @@ app.get("/api/pagos", async (_req, res) => {
           (c[10] || "").trim() !== "Pagado" &&
           (c[10] || "").trim() !== "Eliminado"
       );
-      if (!clienteAsociado) continue; // ocultar clientes pagados en la interfaz
+      if (!clienteAsociado) continue;
 
       items.push({
         rowNumber: i + 1,
@@ -506,7 +501,7 @@ app.get("/api/pdf/clientes", async (req, res) => {
 
     const clientes = await leerClientes();
     const pagos = await leerPagos();
-    const rows = clientes.filter((r, i) => i > 0 && r[0]); // incluir todos (activos, pagados, eliminados)
+    const rows = clientes.filter((r, i) => i > 0 && r[0]);
     const pagosRows = pagos.filter((r, i) => i > 0 && r[0]);
     const hoy = new Date();
 
@@ -515,7 +510,6 @@ app.get("/api/pdf/clientes", async (req, res) => {
     const doc = new PDFDocument({ margin: 40 });
     doc.pipe(res);
 
-    // ✅ Soporte para caracteres y emojis
     const fontPath = path.join(__dirname, "fonts", "DejaVuSans.ttf");
     doc.registerFont("DejaVu", fontPath);
     doc.font("DejaVu");
