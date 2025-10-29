@@ -49,30 +49,33 @@ app.use(
 );
 
 // === GOOGLE AUTH ===
+const { google } = require("googleapis");
 const { JWT } = require("google-auth-library");
 
+// Leer credenciales desde las variables de entorno
 let credentials;
 try {
   credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+  console.log("✅ Credenciales cargadas correctamente.");
 } catch (e) {
-  console.error("❌ No se pudo parsear GOOGLE_CREDENTIALS:", e.message);
+  console.error("❌ No se pudieron leer las credenciales:", e.message);
 }
 
+// Crear cliente de autenticación JWT
 const auth = new JWT({
   email: credentials.client_email,
   key: credentials.private_key,
   scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 
-// 🔎 PRUEBA DIRECTA DE CONEXIÓN CON GOOGLE SHEETS
+// === PRUEBA DIRECTA DE CONEXIÓN ===
 (async () => {
   try {
-    const client = await auth.getClient();
-    const sheets = google.sheets({ version: "v4", auth: client });
-    const prueba = await sheets.spreadsheets.get({
-      spreadsheetId: "1_RXiymPeK5sSPDofjfC-LlugeBNoasMztvLUtJ959Yc",
+    const sheets = google.sheets({ version: "v4", auth });
+    const response = await sheets.spreadsheets.get({
+      spreadsheetId: process.env.SHEET_ID,
     });
-    console.log("✅ Conexión exitosa con Google Sheets:", prueba.data.properties.title);
+    console.log("✅ Conexión exitosa con Google Sheets:", response.data.properties.title);
   } catch (error) {
     console.error("❌ Error de conexión con Google Sheets:", error.message);
   }
