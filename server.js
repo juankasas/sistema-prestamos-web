@@ -50,29 +50,29 @@ app.use(
 );
 
 // === GOOGLE AUTH ===
-
-// === LEER CREDENCIALES DE GOOGLE ===
 let credentials;
 try {
   const raw = process.env.GOOGLE_CREDENTIALS;
   if (!raw) throw new Error("Variable GOOGLE_CREDENTIALS vacía o no encontrada");
 
-  // Limpieza inteligente de formato
-  let cleaned = raw;
+  // 🔥 Nuevo método de decodificación universal
+  const normalized = raw
+    .replace(/\\n/g, '\n')        // convierte saltos de línea dobles a normales
+    .replace(/\\"/g, '"')         // quita escapes de comillas
+    .replace(/^"+|"+$/g, '');     // elimina comillas envolventes
 
-  // Si detecta comillas escapadas y saltos de línea, los corrige
-  if (raw.trim().startsWith('"{') || raw.includes('\\"')) {
-    cleaned = raw
-      .replace(/\\"/g, '"')        // elimina escapes de comillas
-      .replace(/\\\\n/g, '\\n')    // corrige dobles saltos
-      .replace(/^"|"$/g, '');      // elimina comillas envolventes
+  // Intenta parsear. Si falla, intenta como Buffer (por si Render lo codifica)
+  try {
+    credentials = JSON.parse(normalized);
+  } catch {
+    const buffer = Buffer.from(normalized, 'utf8');
+    credentials = JSON.parse(buffer.toString());
   }
 
-  credentials = JSON.parse(cleaned);
   console.log("✅ Credenciales cargadas correctamente y parseadas.");
 } catch (e) {
-  console.error("❌ No se pudieron leer las credenciales correctamente:", e.message);
-  console.error("🔍 Valor inicial detectado (parcial):", process.env.GOOGLE_CREDENTIALS?.slice(0, 200));
+  console.error("❌ Error leyendo credenciales:", e.message);
+  console.error("🔍 Valor inicial detectado (primeros 100 chars):", process.env.GOOGLE_CREDENTIALS?.slice(0, 100));
 }
 
 // Crear cliente de autenticación JWT
