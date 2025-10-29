@@ -1,3 +1,21 @@
+// === CREAR AUTOMÁTICAMENTE EL ARCHIVO credentials.json EN RENDER ===
+const fs = require("fs");
+const path = require("path");
+
+if (process.env.GOOGLE_CREDENTIALS) {
+  const dir = path.join(__dirname, "src");
+  const credentialsPath = path.join(dir, "credentials.json");
+
+  // Crear carpeta src si no existe
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+
+  // Crear archivo credentials.json con el contenido del entorno
+  fs.writeFileSync(credentialsPath, process.env.GOOGLE_CREDENTIALS);
+  console.log("✅ Archivo credentials.json creado correctamente en Render.");
+} else {
+  console.warn("⚠️ Variable GOOGLE_CREDENTIALS no encontrada.");
+}
+
 // =============================
 //  SISTEMA PRÉSTAMOS – Server
 //  • PDF por rango/cliente
