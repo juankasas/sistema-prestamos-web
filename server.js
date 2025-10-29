@@ -49,8 +49,18 @@ app.use(
 );
 
 // === GOOGLE AUTH ===
-const auth = new google.auth.GoogleAuth({
-  keyFile: path.join(__dirname, "credentials.json"),
+const { JWT } = require("google-auth-library");
+
+let credentials;
+try {
+  credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+} catch (e) {
+  console.error("❌ No se pudo parsear GOOGLE_CREDENTIALS:", e.message);
+}
+
+const auth = new JWT({
+  email: credentials.client_email,
+  key: credentials.private_key,
   scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 
