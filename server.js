@@ -1,13 +1,12 @@
-// Fuerza compatibilidad con OpenSSL legacy (necesario para Render con Node 22)
+// === Compatibilidad con Node 22 y Render (evita errores OpenSSL) ===
 process.env.NODE_OPTIONS = "--openssl-legacy-provider";
 
-// === CARGAR CREDENCIALES DESDE ARCHIVO SECRETO EN RENDER ===
+// === DEPENDENCIAS ===
 const fs = require("fs");
 const path = require("path");
-
 const express = require("express");
 const { google } = require("googleapis");
-const { JWT } = require("google-auth-library");
+const { GoogleAuth } = require("google-auth-library");
 const cors = require("cors");
 const session = require("express-session");
 const PDFDocument = require("pdfkit");
@@ -27,28 +26,39 @@ app.use(
 );
 
 // === LEER CREDENCIALES DESDE ARCHIVO SECRETO ===
-let credentials = {};
+let auth;
 try {
   const credentialsPath = "/etc/secrets/credentials.json";
   const raw = fs.readFileSync(credentialsPath, "utf8");
-  credentials = JSON.parse(raw);
+  const json = JSON.parse(raw);
+
+  // Limpieza de clave privada para evitar fallos de PEM/ASN1
+  const cleanedKey = (json.private_key || "")
+    .replace(/\\n/g, "\n")
+    .replace(/\r/g, "")
+    .trim();
+
+  // Cliente GoogleAuth (evita decodificar PEM manualmente)
+  auth = new GoogleAuth({
+    credentials: {
+      client_email: json.client_email,
+      private_key: cleanedKey,
+    },
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
+
   console.log("✅ Credenciales cargadas correctamente desde archivo secreto.");
+  console.log("✅ Cliente GoogleAuth creado correctamente sin PEM decode manual.");
 } catch (e) {
   console.error("❌ Error leyendo archivo de credenciales:", e.message);
   console.error("🔍 Asegúrate de haber creado el archivo secreto credentials.json en Render.");
 }
 
-// === CREAR CLIENTE DE AUTENTICACIÓN JWT ===
-const auth = new JWT({
-  email: credentials.client_email,
-  key: credentials.private_key.replace(/\\n/g, "\n"), // corrige saltos de línea
-  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-});
-
-// === PRUEBA DIRECTA DE CONEXIÓN ===
+// === PRUEBA DE CONEXIÓN ===
 (async () => {
   try {
-    const sheets = google.sheets({ version: "v4", auth });
+    const client = await auth.getClient();
+    const sheets = google.sheets({ version: "v4", auth: client });
     const response = await sheets.spreadsheets.get({
       spreadsheetId: process.env.SHEET_ID,
     });
@@ -58,21 +68,20 @@ const auth = new JWT({
   }
 })();
 
-// === ID DE LA HOJA ===
+// === ID DE LA HOJA DESDE ENV ===
 const spreadsheetId = process.env.SHEET_ID;
 
-// === HELPERS ===
+// === HELPERS PARA SHEETS ===
 async function sheetsApi() {
-  return google.sheets({ version: "v4", auth });
+  const client = await auth.getClient();
+  return google.sheets({ version: "v4", auth: client });
 }
-
 async function getSheetIdByName(nombreHoja) {
   const sheets = await sheetsApi();
   const info = await sheets.spreadsheets.get({ spreadsheetId });
   const hoja = info.data.sheets.find((s) => s.properties.title === nombreHoja);
   return hoja ? hoja.properties.sheetId : 0;
 }
-
 async function leerClientes() {
   const sheets = await sheetsApi();
   const resp = await sheets.spreadsheets.values.get({
@@ -81,7 +90,6 @@ async function leerClientes() {
   });
   return resp.data.values || [];
 }
-
 async function leerPagos() {
   const sheets = await sheetsApi();
   const resp = await sheets.spreadsheets.values.get({
@@ -90,7 +98,6 @@ async function leerPagos() {
   });
   return resp.data.values || [];
 }
-
 const norm = (v) => String(v || "").trim().toLowerCase();
 
 // === LOGIN ===
@@ -120,14 +127,11 @@ app.get("/api/consolidado", async (_req, res) => {
     const rows = clientes.filter((r, i) => i > 0 && r[0]);
     const pagosRows = pagos.filter((r, i) => i > 0 && r[0]);
 
-    let capital = 0,
-      interes = 0,
-      total = 0,
-      rec = 0;
+    let capital = 0, interes = 0, total = 0, rec = 0;
     for (const r of rows) {
       capital += Number(r[3] || 0);
       interes += Number(r[4] || 0);
-      total += Number(r[5] || 0);
+      total   += Number(r[5] || 0);
     }
     for (const p of pagosRows) rec += Number(p[2] || 0);
 
@@ -137,11 +141,9 @@ app.get("/api/consolidado", async (_req, res) => {
         spreadsheetId,
         range: "Consolidado!A2:F2",
         valueInputOption: "USER_ENTERED",
-        requestBody: {
-          values: [[capital, interes, rec, rec, rec, rec]],
-        },
+        requestBody: { values: [[capital, interes, rec, rec, rec, rec]] },
       });
-    } catch (e) {}
+    } catch (_) {}
 
     res.json({
       capital,
@@ -169,7 +171,7 @@ app.post("/api/clientes/agregar", async (req, res) => {
     const i = m * 0.2;
     const t = m + i;
     const v = s > 0 ? t / s : 0;
-    const fechaFinal = fecha?.trim()
+    const fechaFinal = (fecha && String(fecha).trim())
       ? fecha
       : new Date().toLocaleDateString("es-CO");
 
@@ -186,22 +188,7 @@ app.post("/api/clientes/agregar", async (req, res) => {
       range: "Clientes!A:L",
       valueInputOption: "USER_ENTERED",
       requestBody: {
-        values: [
-          [
-            codigo,
-            nombre,
-            telefono,
-            m,
-            i,
-            t,
-            s,
-            v,
-            0,
-            t,
-            "Pagando",
-            fechaFinal,
-          ],
-        ],
+        values: [[codigo, nombre, telefono, m, i, t, s, v, 0, t, "Pagando", fechaFinal]],
       },
     });
 
@@ -226,9 +213,10 @@ app.put("/api/clientes/editar", async (req, res) => {
     const v = s > 0 ? t / s : 0;
 
     const rows = await leerClientes();
-    const idx = rows.findIndex((r) => (r[0] || "").trim() === codigo.trim());
+    const idx = rows.findIndex((r) => (r[0] || "").trim() === String(codigo).trim());
     if (idx < 1) return res.status(404).send("❌ Cliente no encontrado.");
     const rowNumber = idx + 1;
+
     const pagado = Number(rows[idx][8] || 0);
     const saldo = Math.max(0, t - pagado);
     const estado = saldo <= 0 ? "Pagado" : rows[idx][10] || "Pagando";
@@ -254,7 +242,7 @@ app.put("/api/clientes/editar", async (req, res) => {
   }
 });
 
-// === UTILIDADES ===
+// === UTILIDADES DE RECOMPUTO ===
 async function recomputarClienteDesdePagos(codigoONombre) {
   const clientes = await leerClientes();
   const pagos = await leerPagos();
@@ -307,7 +295,7 @@ async function recomputarClienteDesdePagos(codigoONombre) {
   });
 }
 
-// === PAGOS ===
+// === LISTAR PAGOS ===
 app.get("/api/pagos", async (_req, res) => {
   try {
     const rows = await leerPagos();
@@ -344,6 +332,7 @@ app.get("/api/pagos", async (_req, res) => {
   }
 });
 
+// === AGREGAR PAGO ===
 app.post("/api/pagos/agregar", async (req, res) => {
   try {
     const { cliente, cuota, valor, observacion, fecha } = req.body;
@@ -353,9 +342,7 @@ app.post("/api/pagos/agregar", async (req, res) => {
     const clientes = await leerClientes();
     const match = clientes.find(
       (r, i) =>
-        i > 0 &&
-        r[0] &&
-        (norm(r[0]) === norm(cliente) || norm(r[1]) === norm(cliente))
+        i > 0 && r[0] && (norm(r[0]) === norm(cliente) || norm(r[1]) === norm(cliente))
     );
     if (!match) return res.status(404).send("❌ Cliente no encontrado.");
     const code = match[0];
@@ -366,15 +353,7 @@ app.post("/api/pagos/agregar", async (req, res) => {
       range: "Pagos!A:E",
       valueInputOption: "USER_ENTERED",
       requestBody: {
-        values: [
-          [
-            code,
-            cuota,
-            valor,
-            observacion || "-",
-            fecha || new Date().toLocaleDateString("es-CO"),
-          ],
-        ],
+        values: [[code, cuota, valor, observacion || "-", fecha || new Date().toLocaleDateString("es-CO")]],
       },
     });
 
@@ -386,6 +365,7 @@ app.post("/api/pagos/agregar", async (req, res) => {
   }
 });
 
+// === EDITAR PAGO ===
 app.put("/api/pagos/editar", async (req, res) => {
   try {
     const { rowNumber, cliente, cuota, valor, observacion, fecha } = req.body;
@@ -395,9 +375,7 @@ app.put("/api/pagos/editar", async (req, res) => {
     const clientes = await leerClientes();
     const match = clientes.find(
       (r, i) =>
-        i > 0 &&
-        r[0] &&
-        (norm(r[0]) === norm(cliente) || norm(r[1]) === norm(cliente))
+        i > 0 && r[0] && (norm(r[0]) === norm(cliente) || norm(r[1]) === norm(cliente))
     );
     if (!match) return res.status(404).send("❌ Cliente no encontrado.");
     const code = match[0];
@@ -407,17 +385,7 @@ app.put("/api/pagos/editar", async (req, res) => {
       spreadsheetId,
       range: `Pagos!A${rowNumber}:E${rowNumber}`,
       valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [
-          [
-            code,
-            cuota,
-            valor,
-            observacion || "-",
-            fecha || new Date().toLocaleDateString("es-CO"),
-          ],
-        ],
-      },
+      requestBody: { values: [[code, cuota, valor, observacion || "-", fecha || new Date().toLocaleDateString("es-CO")]] },
     });
 
     await recomputarClienteDesdePagos(code);
@@ -433,7 +401,7 @@ app.delete("/api/clientes/eliminar/:codigo", async (req, res) => {
   try {
     const codigo = req.params.codigo || "";
     const rows = await leerClientes();
-    const idx = rows.findIndex((r) => (r[0] || "").trim() === codigo.trim());
+    const idx = rows.findIndex((r) => (r[0] || "").trim() === String(codigo).trim());
     if (idx < 1) return res.status(404).send("❌ Cliente no encontrado.");
     const fila = idx + 1;
 
@@ -445,9 +413,7 @@ app.delete("/api/clientes/eliminar/:codigo", async (req, res) => {
       requestBody: { values: [["Eliminado"]] },
     });
 
-    res.send(
-      `🗑️ Cliente ${codigo} ocultado en la interfaz (no se borró de la hoja).`
-    );
+    res.send(`🗑️ Cliente ${codigo} ocultado en la interfaz (no se borró de la hoja).`);
   } catch (err) {
     console.error(err);
     res.status(500).send("❌ Error al ocultar cliente.");
@@ -465,13 +431,10 @@ function parseFechaCO(s) {
   return isNaN(d) ? null : d;
 }
 const mismoDia = (a, b) =>
-  a.getFullYear() === b.getFullYear() &&
-  a.getMonth() === b.getMonth() &&
-  a.getDate() === b.getDate();
+  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 function mismaSemana(a, b) {
   const onejan = new Date(a.getFullYear(), 0, 1);
-  const getWeek = (d) =>
-    Math.ceil(((d - onejan) / 86400000 + onejan.getDay() + 1) / 7);
+  const getWeek = (d) => Math.ceil(((d - onejan) / 86400000 + onejan.getDay() + 1) / 7);
   return a.getFullYear() === b.getFullYear() && getWeek(a) === getWeek(b);
 }
 
@@ -492,8 +455,10 @@ app.get("/api/pdf/clientes", async (req, res) => {
     doc.pipe(res);
 
     const fontPath = path.join(__dirname, "fonts", "DejaVuSans.ttf");
-    doc.registerFont("DejaVu", fontPath);
-    doc.font("DejaVu");
+    if (fs.existsSync(fontPath)) {
+      doc.registerFont("DejaVu", fontPath);
+      doc.font("DejaVu");
+    }
 
     doc.fontSize(18).text("📘 Reporte de Préstamos - Finanzas JKzas", { align: "center" });
     doc.moveDown();
@@ -502,57 +467,45 @@ app.get("/api/pdf/clientes", async (req, res) => {
       const fc = parseFechaCO(c[11]);
       if (tipo === "cliente") {
         if (!valor) return true;
-        return (
-          (c[0] || "").toLowerCase().includes(valor) ||
-          (c[1] || "").toLowerCase().includes(valor)
-        );
+        return ((c[0] || "").toLowerCase().includes(valor) || (c[1] || "").toLowerCase().includes(valor));
       }
       if (tipo === "dia") return fc && mismoDia(fc, hoy);
       if (tipo === "semana") return fc && mismaSemana(fc, hoy);
-      if (tipo === "mes")
-        return fc && fc.getMonth() === hoy.getMonth() && fc.getFullYear() === hoy.getFullYear();
+      if (tipo === "mes") return fc && fc.getMonth() === hoy.getMonth() && fc.getFullYear() === hoy.getFullYear();
       if (tipo === "ano") return fc && fc.getFullYear() === hoy.getFullYear();
       return true;
     });
 
     for (const c of list) {
-      const cod = c[0],
-        nom = c[1];
+      const cod = c[0], nom = c[1];
       doc.fontSize(13).text(`👤 ${nom} (${cod}) - 📞 Tel: ${c[2]}`);
-      doc
-        .fontSize(11)
-        .text(
-          `💰 Monto: $${Number(c[3] || 0).toLocaleString("es-CO")} | 💵 Interés: $${Number(
-            c[4] || 0
-          ).toLocaleString("es-CO")} | 💸 Total: $${Number(c[5] || 0).toLocaleString("es-CO")}`
-        );
+      doc.fontSize(11).text(
+        `💰 Monto: $${Number(c[3] || 0).toLocaleString("es-CO")} | 💵 Interés: $${Number(c[4] || 0).toLocaleString("es-CO")} | 💸 Total: $${Number(c[5] || 0).toLocaleString("es-CO")}`
+      );
       doc.text(`📊 Cuotas: ${c[6]} | 💳 Valor por cuota: $${Number(c[7] || 0).toLocaleString("es-CO")}`);
       doc.text(
-        `✅ Pagado: $${Number(c[8] || 0).toLocaleString("es-CO")} | 💼 Saldo: $${Number(
-          c[9] || 0
-        ).toLocaleString("es-CO")} | 📋 Estado: ${c[10] || ""}`
+        `✅ Pagado: $${Number(c[8] || 0).toLocaleString("es-CO")} | 💼 Saldo: $${Number(c[9] || 0).toLocaleString("es-CO")} | 📋 Estado: ${c[10] || ""}`
       );
       doc.text(`📅 Fecha del préstamo: ${c[11] || "-"}`);
       doc.moveDown(0.3);
 
-      const pagosCliente = pagosRows.filter((p) => p[0] === cod).filter((p) => {
-        if (["cliente", "todo"].includes(tipo)) return true;
-        const f = parseFechaCO(p[4]);
-        if (!f) return false;
-        if (tipo === "dia") return mismoDia(f, hoy);
-        if (tipo === "semana") return mismaSemana(f, hoy);
-        if (tipo === "mes")
-          return f.getMonth() === hoy.getMonth() && f.getFullYear() === hoy.getFullYear();
-        if (tipo === "ano") return f.getFullYear() === hoy.getFullYear();
-        return true;
-      });
+      const pagosCliente = pagosRows
+        .filter((p) => p[0] === cod)
+        .filter((p) => {
+          if (["cliente", "todo"].includes(tipo)) return true;
+          const f = parseFechaCO(p[4]);
+          if (!f) return false;
+          if (tipo === "dia") return mismoDia(f, hoy);
+          if (tipo === "semana") return mismaSemana(f, hoy);
+          if (tipo === "mes") return f.getMonth() === hoy.getMonth() && f.getFullYear() === hoy.getFullYear();
+          if (tipo === "ano") return f.getFullYear() === hoy.getFullYear();
+          return true;
+        });
 
       if (pagosCliente.length) {
         pagosCliente.forEach((p) => {
           doc.text(
-            `💵 Pago ${p[1]}: $${Number(p[2] || 0).toLocaleString("es-CO")} — ${p[4] || "-"} ${
-              p[3] && p[3] !== "-" ? `(${p[3]})` : ""
-            }`
+            `💵 Pago ${p[1]}: $${Number(p[2] || 0).toLocaleString("es-CO")} — ${p[4] || "-"} ${p[3] && p[3] !== "-" ? `(${p[3]})` : ""}`
           );
         });
       } else {
@@ -568,10 +521,8 @@ app.get("/api/pdf/clientes", async (req, res) => {
   }
 });
 
-// === START ===
+// === START SERVER ===
 const PORT = 3000;
-app.listen(PORT, () =>
-  console.log(`✅ Servidor corriendo en http://localhost:${PORT}`)
-);
+app.listen(PORT, () => console.log(`✅ Servidor corriendo en http://localhost:${PORT}`));
 console.log("Dueño ➜  http://localhost:3000/dueno.html");
 console.log("Cobrador ➜  http://localhost:3000/cobrador.html");
