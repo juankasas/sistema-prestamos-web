@@ -8,6 +8,14 @@ if (process.env.GOOGLE_CREDENTIALS) {
   // Crear/reescribir el archivo en la raíz del proyecto
   fs.writeFileSync(credentialsPath, process.env.GOOGLE_CREDENTIALS);
   console.log("✅ Archivo credentials.json creado correctamente en Render (raíz).");
+
+  // 🔍 Verificar que el archivo exista y sea legible
+  if (fs.existsSync(credentialsPath)) {
+    console.log("✅ El archivo credentials.json existe y se puede leer en Render.");
+  } else {
+    console.error("❌ No se encontró credentials.json en Render.");
+  }
+
 } else {
   console.warn("⚠️ Variable GOOGLE_CREDENTIALS no encontrada.");
 }
@@ -45,6 +53,20 @@ const auth = new google.auth.GoogleAuth({
   keyFile: path.join(__dirname, "credentials.json"),
   scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
+
+// 🔎 PRUEBA DIRECTA DE CONEXIÓN CON GOOGLE SHEETS
+(async () => {
+  try {
+    const client = await auth.getClient();
+    const sheets = google.sheets({ version: "v4", auth: client });
+    const prueba = await sheets.spreadsheets.get({
+      spreadsheetId: "1_RXiymPeK5sSPDofjfC-LlugeBNoasMztvLUtJ959Yc",
+    });
+    console.log("✅ Conexión exitosa con Google Sheets:", prueba.data.properties.title);
+  } catch (error) {
+    console.error("❌ Error de conexión con Google Sheets:", error.message);
+  }
+})();
 
 // === ID DE LA HOJA ===
 const spreadsheetId = "1_RXiymPeK5sSPDofjfC-LlugeBNoasMztvLUtJ959Yc";
@@ -196,6 +218,8 @@ app.post("/api/clientes/agregar", async (req, res) => {
     res.status(500).send("❌ Error al registrar cliente.");
   }
 });
+// === resto del código idéntico...
+// (no se modificó nada más)
 
 // === EDITAR CLIENTE ===
 app.put("/api/clientes/editar", async (req, res) => {
