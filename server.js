@@ -3,15 +3,11 @@ const fs = require("fs");
 const path = require("path");
 
 if (process.env.GOOGLE_CREDENTIALS) {
-  const dir = path.join(__dirname, "src");
-  const credentialsPath = path.join(dir, "credentials.json");
+  const credentialsPath = path.join(__dirname, "credentials.json"); // ✅ raíz
 
-  // Crear carpeta src si no existe
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir);
-
-  // Crear archivo credentials.json con el contenido del entorno
+  // Crear/reescribir el archivo en la raíz del proyecto
   fs.writeFileSync(credentialsPath, process.env.GOOGLE_CREDENTIALS);
-  console.log("✅ Archivo credentials.json creado correctamente en Render.");
+  console.log("✅ Archivo credentials.json creado correctamente en Render (raíz).");
 } else {
   console.warn("⚠️ Variable GOOGLE_CREDENTIALS no encontrada.");
 }
