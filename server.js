@@ -1,3 +1,6 @@
+// Fuerza compatibilidad con OpenSSL legacy (necesario para Render con Node 22)
+process.env.NODE_OPTIONS = "--openssl-legacy-provider";
+
 // === CARGAR CREDENCIALES DESDE ARCHIVO SECRETO EN RENDER ===
 const fs = require("fs");
 const path = require("path");
