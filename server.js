@@ -38,7 +38,7 @@ try {
 // Crear cliente de autenticación JWT
 const auth = new JWT({
   email: credentials.client_email,
-  key: credentials.private_key,
+  key: credentials.private_key.replace(/\\n/g, '\n'),
   scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 
