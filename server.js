@@ -51,13 +51,20 @@ app.use(
 
 // === GOOGLE AUTH ===
 
-// Leer credenciales desde las variables de entorno
+// === LEER CREDENCIALES DE GOOGLE ===
 let credentials;
 try {
-  credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-  console.log("✅ Credenciales cargadas correctamente.");
+  const raw = process.env.GOOGLE_CREDENTIALS;
+  if (!raw) throw new Error("Variable GOOGLE_CREDENTIALS vacía o no encontrada");
+
+  // Si detecta que empieza con comillas escapadas o '\n', limpia el formato
+  const cleaned = raw.trim().startsWith("{\\n") ? JSON.parse(raw.replace(/\\n/g, "\\n")) : JSON.parse(raw);
+
+  credentials = cleaned;
+  console.log("✅ Credenciales cargadas correctamente y parseadas.");
 } catch (e) {
-  console.error("❌ No se pudieron leer las credenciales:", e.message);
+  console.error("❌ No se pudieron leer las credenciales correctamente:", e.message);
+  console.error("🔍 Valor inicial detectado (parcial):", (process.env.GOOGLE_CREDENTIALS || "").slice(0, 100));
 }
 
 // Crear cliente de autenticación JWT
