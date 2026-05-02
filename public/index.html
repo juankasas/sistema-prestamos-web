@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iniciar sesión - Finanzas JKzas</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="login-container">
+    <h2>🔐 Ingreso al Sistema</h2>
+    <p>Ingresa tu clave para continuar:</p>
+    <form id="loginForm">
+      <input type="password" id="password" placeholder="Clave de acceso" required />
+      <button type="submit">Entrar</button>
+      <p id="mensaje"></p>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById("loginForm");
+    const password = document.getElementById("password");
+    const mensaje = document.getElementById("mensaje");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const clave = password.value.trim();
+      if (!clave) {
+        mensaje.style.color = "red";
+        mensaje.textContent = "⚠️ Ingrese su clave.";
+        return;
+      }
+      try {
+        const resp = await fetch("/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: clave }),
+        });
+
+        if (resp.redirected) {
+          window.location.href = resp.url;
+        } else {
+          const text = await resp.text();
+          mensaje.style.color = "red";
+          mensaje.textContent = text;
+        }
+      } catch (err) {
+        mensaje.style.color = "red";
+        mensaje.textContent = "❌ Error de conexión con el servidor.";
+      }
+    });
+  </script>
+</body>
+</html>

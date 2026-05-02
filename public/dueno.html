@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel del Dueño - Finanzas JKzas</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { background-color: #eef1f6; font-family: Arial, sans-serif; }
+    .panel { background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 1100px; margin: 40px auto; }
+    h2, h3 { color: #0f63f4; text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { padding: 8px; border: 1px solid #ddd; text-align: left; white-space: nowrap; }
+    th { background-color: #f0f0f0; }
+    input, textarea { width: 100%; padding: 6px; border-radius: 5px; border: 1px solid #ccc; }
+    button { width: 100%; margin-top: 10px; padding: 10px; background-color: #0f63f4; border: none; color: white; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    button:hover { background-color: #084fc1; }
+
+    #mensaje, #mensajeGasto { text-align: center; color: green; margin-top: 10px; }
+
+    .calculos { background: #f9f9f9; border-radius: 8px; padding: 10px; margin-top: 10px; border: 1px dashed #ccc; }
+    .consolidado { background: #e7f0ff; border-radius: 10px; padding: 15px; margin-bottom: 25px; border: 2px solid #b3d1ff; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .card { background: white; padding: 10px; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.1); text-align: center; }
+    .card strong { color: #0f63f4; font-size: 18px; display: block; }
+    .card.gasto strong { color: #dc3545; }
+    .card.utilidad strong { color: #198754; }
+
+    .editar { background: #ffc107; color: #000; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    .eliminar { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+    .fila-opciones { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; }
+    select#filtroPDF { width: 200px; padding: 6px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold; color: #0f63f4; }
+    .fila-opciones button { width: auto; padding: 8px 16px; }
+
+    .table-wrap { overflow-x: auto; width: 100%; }
+
+    .bloque-gastos { margin-top: 35px; background: #fff8e7; border: 2px solid #ffd36a; border-radius: 10px; padding: 15px; }
+    .bloque-gastos h3 { color: #b36b00; }
+  </style>
+</head>
+
+<body>
+  <div class="panel">
+
+    <div class="consolidado">
+      <h3>📊 Consolidado General</h3>
+
+      <div class="grid">
+        <div class="card"><strong id="totalCapital">$0</strong><span>Capital Prestado</span></div>
+        <div class="card"><strong id="totalInteres">$0</strong><span>Intereses Ganados</span></div>
+        <div class="card"><strong id="totalRecaudado">$0</strong><span>Total Recaudado</span></div>
+      </div>
+
+      <div class="grid" style="margin-top:10px;">
+        <div class="card"><strong id="totalSemanal">$0</strong><span>Recaudo Semanal</span></div>
+        <div class="card"><strong id="totalMensual">$0</strong><span>Recaudo Mensual</span></div>
+        <div class="card"><strong id="totalAnual">$0</strong><span>Recaudo Anual</span></div>
+      </div>
+
+      <div class="grid" style="margin-top:10px;">
+        <div class="card gasto"><strong id="totalGastos">$0</strong><span>Gastos del Propietario</span></div>
+        <div class="card utilidad"><strong id="utilidadReal">$0</strong><span>Utilidad Real</span></div>
+        <div class="card"><strong id="capitalDisponible">$0</strong><span>Capital Disponible Real</span></div>
+      </div>
+    </div>
+
+    <h2>📘 Registro de Clientes</h2>
+
+    <table>
+      <tr><th>Nombre</th><td><input type="text" id="nombre" placeholder="Nombre del cliente" /></td></tr>
+      <tr><th>Teléfono</th><td><input type="text" id="telefono" placeholder="Ej: 3001234567" /></td></tr>
+      <tr><th>Monto Prestado ($)</th><td><input type="number" id="monto" placeholder="Ej: 500000" /></td></tr>
+      <tr><th>Interés (%)</th><td><input type="number" id="porcentajeInteres" placeholder="Ej: 20, 15, 10 o 0" value="20" /></td></tr>
+      <tr><th>Cuotas / Días</th><td><input type="number" id="cuotas" placeholder="Ej: 24, 30 o 45" /></td></tr>
+      <tr><th>Fecha de Registro</th><td><input type="date" id="fecha" /></td></tr>
+    </table>
+
+    <div class="calculos">
+      <p>💰 <b>Interés:</b> <span id="interes">$0</span></p>
+      <p>💵 <b>Total a Pagar:</b> <span id="total">$0</span></p>
+      <p>📆 <b>Valor por Cuota / Día:</b> <span id="valorCuota">$0</span></p>
+    </div>
+
+    <button id="btn-registrar">Registrar Cliente</button>
+    <p id="mensaje"></p>
+
+    <div class="bloque-gastos">
+      <h3>💸 Registro de Gastos del Propietario</h3>
+
+      <table>
+        <tr><th>Fecha</th><td><input type="date" id="fechaGasto" /></td></tr>
+        <tr><th>Concepto</th><td><input type="text" id="conceptoGasto" placeholder="Ej: Transporte, comida, papelería" /></td></tr>
+        <tr><th>Valor del Gasto ($)</th><td><input type="number" id="valorGasto" placeholder="Ej: 50000" /></td></tr>
+        <tr><th>Observación</th><td><textarea id="obsGasto" rows="2" placeholder="Detalle opcional"></textarea></td></tr>
+      </table>
+
+      <button id="btn-guardar-gasto">Registrar Gasto</button>
+      <p id="mensajeGasto"></p>
+
+      <h3>Historial de Gastos</h3>
+      <div class="table-wrap">
+        <table id="tablaGastos">
+          <thead>
+            <tr>
+              <th>Fila</th>
+              <th>Fecha</th>
+              <th>Concepto</th>
+              <th>Valor</th>
+              <th>Observación</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="fila-opciones">
+      <h3 style="margin-top: 30px;">Clientes Activos</h3>
+      <div>
+        <select id="filtroPDF">
+          <option value="todo">📄 Todo</option>
+          <option value="cliente">👤 Por Cliente</option>
+          <option value="ano">📈 Por Año</option>
+        </select>
+        <button id="btnPDF">🖨️ Generar PDF</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="tablaClientes">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Teléfono</th>
+            <th>Monto</th>
+            <th>Interés</th>
+            <th>Total</th>
+            <th>Cuotas / Días</th>
+            <th>Valor por Cuota</th>
+            <th>Valor Pagado</th>
+            <th>Saldo Pendiente</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

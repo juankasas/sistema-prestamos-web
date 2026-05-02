@@ -1,0 +1,77 @@
+/* === Base login (igual) === */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f5f6fa;
+  margin: 0;            /* evita scrolls dobles */
+  overflow-y: auto;     /* un solo scroll vertical global */
+}
+
+.login-container {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.1);
+  text-align: center;
+  width: 300px;
+  margin: 10vh auto;
+}
+
+h2 { margin-bottom: 10px; color: #0f63f4; }
+p { margin: 5px 0 15px; color: #333; }
+
+input, textarea, select {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+button {
+  width: 100%;
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #0f63f4;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+button:hover { background-color: #084fc1; }
+
+p#mensaje { color: red; font-size: 0.9em; margin-top: 10px; }
+
+/* === Paneles === */
+.panel {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  width: 950px;              /* dueño */
+  margin: 40px auto;
+  overflow: visible;         /* evita scroll interno */
+}
+
+/* Cobrador panel unificado, sin scroll interno */
+.panel.cobrador { width: 600px; overflow: visible; }
+
+/* Tarjetas/estilos de las páginas existentes (igual que antes) */
+th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+th { background-color: #f0f0f0; }
+.editar { background: #ffc107; color: #000; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+.eliminar { background: #dc3545; color: #fff; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+/* === Tabla responsiva con scroll horizontal === */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;            /* << scroll horizontal si hace falta */
+}
+.table-wrap table {
+  min-width: 1100px;           /* asegura que no colapsen columnas */
+  border-collapse: collapse;
+}
+.table-wrap th, .table-wrap td {
+  white-space: nowrap;         /* evita que se rompan las celdas */
+}

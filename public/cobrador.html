@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel del Cobrador - Finanzas JKzas</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { background-color: #eef1f6; font-family: Arial, sans-serif; }
+    .panel.cobrador { width: 950px; margin: 40px auto; }
+    h2, h3 { text-align:center; color:#0f63f4; }
+    .table-wrap { width:100%; overflow-x:auto; }
+    table { width:100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding:8px; border:1px solid #ddd; text-align:left; white-space:nowrap; }
+    th { background:#f0f0f0; }
+    input, textarea { width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; }
+    button { padding:8px 12px; border:none; border-radius:6px; background:#0f63f4; color:white; font-weight:bold; cursor:pointer; }
+    .editar { background:#ffc107; color:#000; }
+    .cobrar { background:#198754; color:#fff; }
+  </style>
+</head>
+<body>
+  <div class="panel cobrador">
+    <h2>🧾 Registro de Pagos</h2>
+
+    <table>
+      <tr>
+        <th>Cliente Código o Nombre</th>
+        <td><input type="text" id="cliente" placeholder="Ej: CL-001 o Juan Pérez" /></td>
+      </tr>
+      <tr>
+        <th>Cantidad de Cuotas / Días que paga</th>
+        <td><input type="number" id="cuota" placeholder="Ej: 1, 2, 5" /></td>
+      </tr>
+      <tr>
+        <th>Valor Pagado</th>
+        <td><input type="number" id="valor" placeholder="$" /></td>
+      </tr>
+      <tr>
+        <th>Observación</th>
+        <td><textarea id="obs" rows="2" placeholder="Ej: pagó 2 cuotas"></textarea></td>
+      </tr>
+    </table>
+
+    <button id="btn-guardar">Registrar Pago</button>
+    <p id="mensaje"></p>
+
+    <h3>👥 Clientes Activos para Cobrar</h3>
+    <div class="table-wrap">
+      <table id="tablaClientesCobrador">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Teléfono</th>
+            <th>Cuotas/Días Pendientes</th>
+            <th>Valor Cuota/Día</th>
+            <th>Pagado</th>
+            <th>Saldo</th>
+            <th>Estado</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:30px;">📋 Historial de Pagos Activos</h3>
+    <div class="table-wrap">
+      <table id="tablaHistorial">
+        <thead>
+          <tr>
+            <th>Fila</th>
+            <th>Cliente</th>
+            <th>Cuotas/Días Pagados</th>
+            <th>Valor Pagado</th>
+            <th>Observación</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="script-cobrador.js"></script>
+</body>
+</html>
