@@ -1,8 +1,9 @@
 // =============================
 // SCRIPT COBRADOR - FINANZAS JKzas
-// ✅ Sincronizado con clientes activos
-// ✅ Calcula valor automático
-// ✅ Si paga todas las cuotas pendientes, cobra el saldo exacto
+// ✅ Cobro SOLO por código exacto
+// ✅ Muestra código + nombre antes de cobrar
+// ✅ Mantiene valor pagado editable manualmente
+// ✅ Calcula valor automático, pero permite modificarlo
 // =============================
 
 const cliente = document.getElementById("cliente");
@@ -10,6 +11,7 @@ const cuota = document.getElementById("cuota");
 const valor = document.getElementById("valor");
 const obs = document.getElementById("obs");
 const mensaje = document.getElementById("mensaje");
+const clienteSeleccionadoInfo = document.getElementById("clienteSeleccionadoInfo");
 
 const tbodyPagos = document.querySelector("#tablaHistorial tbody");
 const tbodyClientes = document.querySelector("#tablaClientesCobrador tbody");
@@ -46,6 +48,10 @@ function money(n) {
 
 function normalizarTexto(t) {
   return String(t || "").trim().toLowerCase();
+}
+
+function normalizarCodigo(t) {
+  return String(t || "").trim().toUpperCase();
 }
 
 window.addEventListener("load", async () => {
@@ -104,34 +110,22 @@ async function cargarClientes() {
 }
 
 // =============================
-// SELECCIONAR CLIENTE
-// =============================
-function seleccionarCliente(codigo) {
-  cliente.value = codigo;
-  cuota.value = "1";
-  obs.value = "";
-  calcularValorAutomatico();
-}
-
-// =============================
-// BUSCAR CLIENTE ACTIVO
+// BUSCAR CLIENTE ACTIVO SOLO POR CÓDIGO
 // =============================
 function buscarClienteActivo(valorBuscado) {
-  const key = normalizarTexto(valorBuscado);
+  const key = normalizarCodigo(valorBuscado);
 
   return clientesData
     .slice(1)
-    .reverse()
     .find(c => {
       if (!c[0]) return false;
 
-      const codigo = normalizarTexto(c[0]);
-      const nombre = normalizarTexto(c[1]);
+      const codigo = normalizarCodigo(c[0]);
       const estado = normalizarTexto(c[10]);
       const saldo = num(c[9]);
 
       return (
-        (codigo === key || nombre === key) &&
+        codigo === key &&
         estado !== "pagado" &&
         estado !== "eliminado" &&
         saldo > 0
@@ -139,15 +133,43 @@ function buscarClienteActivo(valorBuscado) {
     });
 }
 
+function mostrarClienteSeleccionado(c) {
+  if (!c) {
+    clienteSeleccionadoInfo.textContent = "Cliente seleccionado: ninguno";
+    clienteSeleccionadoInfo.style.color = "#dc3545";
+    return;
+  }
+
+  clienteSeleccionadoInfo.textContent = `Cliente seleccionado: ${c[0]} - ${c[1]}`;
+  clienteSeleccionadoInfo.style.color = "#0f63f4";
+}
+
+// =============================
+// SELECCIONAR CLIENTE
+// =============================
+function seleccionarCliente(codigo) {
+  cliente.value = normalizarCodigo(codigo);
+  cuota.value = "1";
+  obs.value = "";
+
+  const c = buscarClienteActivo(cliente.value);
+  mostrarClienteSeleccionado(c);
+
+  calcularValorAutomatico();
+}
+
 // =============================
 // CALCULAR VALOR AUTOMÁTICO
 // =============================
 function calcularValorAutomatico() {
-  const cli = cliente.value.trim();
+  const cli = normalizarCodigo(cliente.value);
   const cantidad = num(cuota.value);
+
+  cliente.value = cli;
 
   if (!cli || cantidad <= 0) {
     valor.value = "";
+    mostrarClienteSeleccionado(null);
     return;
   }
 
@@ -155,8 +177,11 @@ function calcularValorAutomatico() {
 
   if (!c) {
     valor.value = "";
+    mostrarClienteSeleccionado(null);
     return;
   }
+
+  mostrarClienteSeleccionado(c);
 
   const cuotasPendientes = num(c[6]);
   const valorUnitario = num(c[7]);
@@ -164,12 +189,10 @@ function calcularValorAutomatico() {
 
   let totalPago = valorUnitario * cantidad;
 
-  // ✅ SI PAGA TODAS LAS CUOTAS PENDIENTES, COBRA SALDO EXACTO
   if (cantidad >= cuotasPendientes) {
     totalPago = saldo;
   }
 
-  // ✅ NUNCA DEJA COBRAR MÁS DEL SALDO
   if (totalPago > saldo) {
     totalPago = saldo;
   }
@@ -185,10 +208,21 @@ cuota.addEventListener("input", calcularValorAutomatico);
 // REGISTRAR PAGO
 // =============================
 document.getElementById("btn-guardar").addEventListener("click", async () => {
-  const cli = cliente.value.trim();
+  const cli = normalizarCodigo(cliente.value);
   const cuo = num(cuota.value);
   const val = num(valor.value);
   const ob = obs.value.trim();
+
+  const c = buscarClienteActivo(cli);
+
+  if (!c) {
+    mensaje.style.color = "red";
+    mensaje.textContent = "❌ Cliente activo no encontrado. Verifica el código.";
+    mostrarClienteSeleccionado(null);
+    return;
+  }
+
+  mostrarClienteSeleccionado(c);
 
   if (!cli || cuo <= 0 || val <= 0) {
     mensaje.style.color = "red";
@@ -222,6 +256,7 @@ document.getElementById("btn-guardar").addEventListener("click", async () => {
     cuota.value = "";
     valor.value = "";
     obs.value = "";
+    mostrarClienteSeleccionado(null);
 
     await cargarClientes();
     await cargarPagos();
@@ -292,12 +327,16 @@ function abrirEdicionPago(rowNumber) {
   if (!row) return;
 
   const textoCliente = row.children[1].textContent;
-  const codigo = textoCliente.split("-")[0].trim();
+  const matchCodigo = textoCliente.match(/CL-\d+/i);
+  const codigo = matchCodigo ? matchCodigo[0].toUpperCase() : "";
 
   cliente.value = codigo;
   cuota.value = row.children[2].textContent;
   valor.value = num(row.children[3].textContent);
   obs.value = row.children[4].textContent;
+
+  const c = buscarClienteActivo(codigo);
+  mostrarClienteSeleccionado(c);
 
   const confirmar = confirm("¿Actualizar este pago con los datos cargados arriba?");
   if (!confirmar) return;
@@ -306,10 +345,18 @@ function abrirEdicionPago(rowNumber) {
 }
 
 async function editarPago(rowNumber) {
-  const cli = cliente.value.trim();
+  const cli = normalizarCodigo(cliente.value);
   const cuo = num(cuota.value);
   const val = num(valor.value);
   const ob = obs.value.trim();
+
+  const c = buscarClienteActivo(cli);
+
+  if (!c) {
+    alert("❌ Cliente activo no encontrado. Verifica el código.");
+    mostrarClienteSeleccionado(null);
+    return;
+  }
 
   if (!cli || cuo <= 0 || val <= 0) {
     alert("⚠️ Faltan datos para editar.");
@@ -342,6 +389,7 @@ async function editarPago(rowNumber) {
     cuota.value = "";
     valor.value = "";
     obs.value = "";
+    mostrarClienteSeleccionado(null);
 
     await cargarClientes();
     await cargarPagos();

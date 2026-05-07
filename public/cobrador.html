@@ -17,16 +17,30 @@
     button { padding:8px 12px; border:none; border-radius:6px; background:#0f63f4; color:white; font-weight:bold; cursor:pointer; }
     .editar { background:#ffc107; color:#000; }
     .cobrar { background:#198754; color:#fff; }
+    .cliente-info {
+      margin: 12px 0;
+      padding: 12px;
+      border-radius: 8px;
+      background: #e7f0ff;
+      border: 2px solid #b3d1ff;
+      font-weight: bold;
+      color: #0f63f4;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <div class="panel cobrador">
     <h2>🧾 Registro de Pagos</h2>
 
+    <div id="clienteSeleccionadoInfo" class="cliente-info">
+      Cliente seleccionado: ninguno
+    </div>
+
     <table>
       <tr>
-        <th>Cliente Código o Nombre</th>
-        <td><input type="text" id="cliente" placeholder="Ej: CL-001 o Juan Pérez" /></td>
+        <th>Cliente Código</th>
+        <td><input type="text" id="cliente" placeholder="Ej: CL-001" /></td>
       </tr>
       <tr>
         <th>Cantidad de Cuotas / Días que paga</th>

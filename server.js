@@ -187,12 +187,11 @@ function buscarClienteActivo(clientes, clienteIngresado) {
       if (!r || !r[0]) return false;
 
       const codigo = norm(r[0]);
-      const nombre = norm(r[1]);
       const estado = norm(r[10]);
       const saldo = parseNumero(r[9]);
 
       return (
-        (codigo === key || nombre === key) &&
+        codigo === key &&
         estado !== "pagado" &&
         estado !== "eliminado" &&
         saldo > 0
