@@ -84,7 +84,7 @@ function calcularValores() {
   const p = num(porcentajeInteres.value);
 
   const ciclos = d / 24;
-  const interes = m * (p / 100) * ciclos;
+  const interes = m * (p / 100);
   const total = m + interes;
   const valorCuota = d > 0 ? total / d : 0;
 

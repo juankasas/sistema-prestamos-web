@@ -253,7 +253,7 @@ app.post("/api/clientes/agregar", async (req, res) => {
     const p = parseNumero(interesPorcentaje);
 
     const ciclos = s / 24;
-    const i = moneyNumber(m * (p / 100) * ciclos);
+    const i = moneyNumber(m * (p / 100));
     const t = moneyNumber(m + i);
     const v = s > 0 ? moneyNumber(t / s) : 0;
 
@@ -310,7 +310,7 @@ app.put("/api/clientes/editar", async (req, res) => {
     const p = parseNumero(interesPorcentaje);
 
     const ciclos = s / 24;
-    const i = moneyNumber(m * (p / 100) * ciclos);
+    const i = moneyNumber(m * (p / 100));
     const t = moneyNumber(m + i);
     const v = s > 0 ? moneyNumber(t / s) : 0;
 
@@ -632,8 +632,8 @@ async function calcularConsolidadoGeneral() {
   rec = moneyNumber(rec);
   gast = moneyNumber(gast);
 
-  const utilidadReal = moneyNumber(rec - gast);
-  const capitalDisponibleReal = moneyNumber(rec - gast);
+  const utilidadReal = moneyNumber(interes - gast);
+  const capitalDisponibleReal = moneyNumber(capital);
 
   return {
     capital,
@@ -718,8 +718,8 @@ function calcularCierreMesDatos(clientes, pagos, gastos, mes, anio) {
   recaudadoMes = moneyNumber(recaudadoMes);
   gastosMes = moneyNumber(gastosMes);
 
-  const utilidadRealMes = moneyNumber(recaudadoMes - gastosMes);
-  const capitalDisponibleMes = moneyNumber(recaudadoMes - gastosMes);
+  const utilidadRealMes = moneyNumber(interesesMes - gastosMes);
+  const capitalDisponibleMes = moneyNumber(capitalMes);
 
   return {
     mes,
