@@ -374,7 +374,7 @@ async function cargarConsolidado() {
 
     totalGastos.textContent = money(d.gastos);
     utilidadReal.textContent = money(d.utilidadReal);
-    capitalDisponible.textContent = money(num(d.capital) - num(d.gastos));
+    capitalDisponible.textContent = money(d.capitalDisponibleReal);
 
   } catch (err) {
     console.error("Error cargando consolidado:", err);
