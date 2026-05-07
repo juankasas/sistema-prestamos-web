@@ -633,7 +633,7 @@ async function calcularConsolidadoGeneral() {
   gast = moneyNumber(gast);
 
   const utilidadReal = moneyNumber(interes - gast);
-  const capitalDisponibleReal = moneyNumber(capital);
+  const capitalDisponibleReal = moneyNumber(capital - gast);
 
   return {
     capital,
@@ -719,7 +719,7 @@ function calcularCierreMesDatos(clientes, pagos, gastos, mes, anio) {
   gastosMes = moneyNumber(gastosMes);
 
   const utilidadRealMes = moneyNumber(interesesMes - gastosMes);
-  const capitalDisponibleMes = moneyNumber(capitalMes);
+  const capitalDisponibleMes = moneyNumber(capitalMes - gastosMes);
 
   return {
     mes,
